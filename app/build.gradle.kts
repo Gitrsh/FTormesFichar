@@ -165,6 +165,7 @@ dependencies {
 
     // Crashlytics
     implementation(libs.firebase.crashlytics.buildtools)
+    implementation(libs.androidx.benchmark.traceprocessor.android)
 
     // Testing
     testImplementation(libs.junit)

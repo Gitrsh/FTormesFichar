@@ -17,22 +17,17 @@ import com.rsh.f_tormes.ui.state.AuthState
 data class AuthState(
     val email: String = "",
     val password: String = "",
+    val nombre: String = "",
+    val apellidos: String = "",
     val user: FirebaseUser? = null,
     val loading: Boolean = false,
     val error: String? = null
 )
 
-/**
- * - Validaciones básicas (email y contraseña)
- * - Limpia de errores al cambiar valores
- * - resetState() para evitar compartir estado entre pantallas
- * - login/register usan viewModelScope y manejan resultados/excepciones
- */
 class AuthViewModel(
     private val repo: AuthRepository = AuthRepository()
 ) : ViewModel() {
 
-    // Estado privado mutabe + getter público inmutable
     var state by mutableStateOf(AuthState())
         private set
 
@@ -48,6 +43,9 @@ class AuthViewModel(
     var apellidosError by mutableStateOf<String?>(null)
         private set
 
+    // -----------------------------
+    // CAMBIO DE CAMPOS
+    // -----------------------------
     fun onNombreChange(new: String) {
         state = state.copy(nombre = new)
         nombreError = if (new.isBlank()) "Introduce tu nombre" else null
@@ -58,19 +56,30 @@ class AuthViewModel(
         apellidosError = if (new.isBlank()) "Introduce tus apellidos" else null
     }
 
-    // Cambia email y limpia error previa si existe
     fun onEmailChange(new: String) {
         state = state.copy(email = new)
         emailError = Validator.validateEmail(new)
     }
 
-    // Cambia password y limpia error previa si existe
     fun onPasswordChange(new: String) {
         state = state.copy(password = new)
         passwordError = Validator.validatePassword(new)
     }
 
-    private fun validateAll(): Boolean {
+    // -----------------------------
+    // VALIDACIÓN LOGIN
+    // -----------------------------
+    private fun validateLogin(): Boolean {
+        emailError = Validator.validateEmail(state.email)
+        passwordError = Validator.validatePassword(state.password)
+
+        return emailError == null && passwordError == null
+    }
+
+    // -----------------------------
+    // VALIDACIÓN REGISTRO
+    // -----------------------------
+    private fun validateRegister(): Boolean {
         emailError = Validator.validateEmail(state.email)
         passwordError = Validator.validatePassword(state.password)
         nombreError = if (state.nombre.isBlank()) "Introduce tu nombre" else null
@@ -82,11 +91,15 @@ class AuthViewModel(
                 apellidosError == null
     }
 
+    // -----------------------------
+    // LOGIN
+    // -----------------------------
     fun login(onSuccess: () -> Unit) {
-        if (!validateAll()) return
+        if (!validateLogin()) return
 
         viewModelScope.launch {
             state = state.copy(loading = true, error = null)
+
             val result = repo.login(state.email, state.password)
 
             state = if (result.isSuccess) {
@@ -99,14 +112,15 @@ class AuthViewModel(
         }
     }
 
-
-     // Intenta registrar. onSuccess se ejecuta si hay usuario.
-
+    // -----------------------------
+    // REGISTRO
+    // -----------------------------
     fun register(onSuccess: () -> Unit) {
-        if (!validateAll()) return
+        if (!validateRegister()) return
 
         viewModelScope.launch {
             state = state.copy(loading = true, error = null)
+
             val result = repo.register(state.email, state.password)
 
             state = if (result.isSuccess) {
@@ -116,7 +130,6 @@ class AuthViewModel(
             }
 
             if (state.user != null) {
-
                 val userData = UserData(
                     uid = state.user!!.uid,
                     email = state.email,
@@ -125,9 +138,13 @@ class AuthViewModel(
                     fechaRegistro = Timestamp.now()
                 )
 
-                UserRepository().saveUser(userData)
+                val saveResult = UserRepository().saveUser(userData)
 
-                onSuccess()
+                if (saveResult.isSuccess) {
+                    onSuccess()
+                } else {
+                    state = state.copy(error = saveResult.exceptionOrNull()?.message)
+                }
             }
         }
     }

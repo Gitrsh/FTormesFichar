@@ -19,4 +19,14 @@ class UserRepository(
             Result.failure(e)
         }
     }
+
+    //Con esta función obtenemos el usuario desde firestor
+    suspend fun getUserById(uid: String): Result<UserData?> {
+        return try {
+            val snapshot = usersRef.document(uid).get().await()
+            Result.success(snapshot.toObject(UserData::class.java))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

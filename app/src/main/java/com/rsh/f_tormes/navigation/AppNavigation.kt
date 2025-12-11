@@ -7,11 +7,13 @@ import androidx.navigation.compose.rememberNavController
 import com.rsh.f_tormes.ui.home.HomeScreen
 import com.rsh.f_tormes.ui.register.RegisterScreen
 import com.rsh.f_tormes.ui.screens.auth.LoginScreen
+import com.rsh.f_tormes.ui.screens.control.ControlHorasScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Register : Screen("register")
     object Home : Screen("home")
+    object ControlHoras : Screen("control_horas")
 }
 
 @Composable
@@ -46,5 +48,10 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         composable(Screen.Home.route) {
             HomeScreen(navController)
         }
+
+        composable(Screen.ControlHoras.route) {
+            ControlHorasScreen(navController)
+        }
+
     }
 }
